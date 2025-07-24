@@ -93,7 +93,7 @@ impl VideohubService {
 
     async fn setup_rship_connection(&self) -> Result<()> {
         let url = format!("ws://{}:{}/myko", self.rship_address, self.rship_port);
-        log::debug!("Connecting to rship at: {}", url);
+        log::debug!("Connecting to rship at: {url}");
 
         self.sdk_client.set_address(Some(url));
         self.sdk_client.await_connection().await;
@@ -152,7 +152,7 @@ impl VideohubService {
                             })
                             .await
                         {
-                            log::error!("Failed to send route command: {}", e);
+                            log::error!("Failed to send route command: {e}");
                         }
                     });
                 },
@@ -176,7 +176,7 @@ impl VideohubService {
                             })
                             .await
                         {
-                            log::error!("Failed to send input label command: {}", e);
+                            log::error!("Failed to send input label command: {e}");
                         }
                     });
                 },
@@ -200,7 +200,7 @@ impl VideohubService {
                             })
                             .await
                         {
-                            log::error!("Failed to send output label command: {}", e);
+                            log::error!("Failed to send output label command: {e}");
                         }
                     });
                 },
@@ -250,13 +250,9 @@ impl VideohubService {
                             input_label,
                         };
                         if let Err(e) = route_emitter.pulse(data).await {
-                            log::error!("Failed to emit route changed event: {}", e);
+                            log::error!("Failed to emit route changed event: {e}");
                         } else {
-                            log::debug!(
-                                "Emitted route changed: output {} -> input {}",
-                                output,
-                                input
-                            );
+                            log::debug!("Emitted route changed: output {output} -> input {input}");
                         }
                     }
                     VideohubEvent::DeviceStatus {
@@ -272,9 +268,9 @@ impl VideohubService {
                             video_outputs,
                         };
                         if let Err(e) = status_emitter.pulse(data).await {
-                            log::error!("Failed to emit device status event: {}", e);
+                            log::error!("Failed to emit device status event: {e}");
                         } else {
-                            log::debug!("Emitted device status: connected={}", connected);
+                            log::debug!("Emitted device status: connected={connected}");
                         }
                     }
                     VideohubEvent::Label {
@@ -288,9 +284,9 @@ impl VideohubService {
                             label: label.clone(),
                         };
                         if let Err(e) = label_emitter.pulse(data).await {
-                            log::error!("Failed to emit label changed event: {}", e);
+                            log::error!("Failed to emit label changed event: {e}");
                         } else {
-                            log::debug!("Emitted label changed: {} port {}", port_type, port);
+                            log::debug!("Emitted label changed: {port_type} port {port}");
                         }
                     }
                 }
@@ -314,7 +310,7 @@ impl VideohubService {
 
             // Connect to videohub
             if let Err(e) = client.connect().await {
-                log::error!("Failed to connect to videohub: {}", e);
+                log::error!("Failed to connect to videohub: {e}");
                 return;
             }
 
@@ -336,17 +332,17 @@ impl VideohubService {
                         match command {
                             VideohubCommand::Route { output, input } => {
                                 if let Err(e) = client.set_route(output, input).await {
-                                    log::error!("Failed to set route: {}", e);
+                                    log::error!("Failed to set route: {e}");
                                 }
                             }
                             VideohubCommand::InputLabel { input, label } => {
                                 if let Err(e) = client.set_input_label(input, label).await {
-                                    log::error!("Failed to set input label: {}", e);
+                                    log::error!("Failed to set input label: {e}");
                                 }
                             }
                             VideohubCommand::OutputLabel { output, label } => {
                                 if let Err(e) = client.set_output_label(output, label).await {
-                                    log::error!("Failed to set output label: {}", e);
+                                    log::error!("Failed to set output label: {e}");
                                 }
                             }
                         }
@@ -426,11 +422,11 @@ impl VideohubService {
 
                                 tokio::time::sleep(Duration::from_secs(5)).await;
                                 if let Err(e) = client.connect().await {
-                                    log::error!("Failed to reconnect to videohub: {}", e);
+                                    log::error!("Failed to reconnect to videohub: {e}");
                                 }
                             }
                             Err(e) => {
-                                log::error!("Error receiving videohub message: {}", e);
+                                log::error!("Error receiving videohub message: {e}");
                                 tokio::time::sleep(Duration::from_secs(1)).await;
                             }
                         }

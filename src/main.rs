@@ -27,8 +27,8 @@ async fn main() -> Result<()> {
     let rship_port = env::var("RSHIP_PORT").unwrap_or_else(|_| "5155".to_string());
 
     log::info!("Starting rship-blackmagic-videohub service");
-    log::info!("Videohub: {}:{}", videohub_host, videohub_port);
-    log::info!("Rship: {}:{}", rship_address, rship_port);
+    log::info!("Videohub: {videohub_host}:{videohub_port}");
+    log::info!("Rship: {rship_address}:{rship_port}");
 
     // Create and start the service
     let service =

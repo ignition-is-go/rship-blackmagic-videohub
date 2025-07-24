@@ -37,10 +37,10 @@ cargo run
 ## Development
 
 ```bash
-cargo fmt --all        # Format code
-cargo clippy           # Lint code
-cargo test             # Run tests
-cargo run              # Run the service
+cargo fmt --all                              # Format code
+cargo clippy --all-targets --all-features    # Lint code (CI runs with -D warnings)
+cargo test                                   # Run tests
+cargo run                                    # Run the service
 ```
 
 ## Dependencies

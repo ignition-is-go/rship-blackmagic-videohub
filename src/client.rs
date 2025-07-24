@@ -149,14 +149,14 @@ impl VideohubClient {
                 log::debug!("Received ping");
             }
             _ => {
-                log::debug!("Received unhandled message: {:?}", message);
+                log::debug!("Received unhandled message: {message:?}");
             }
         }
     }
 
     // Set a video output route
     pub async fn set_route(&mut self, output: u32, input: u32) -> Result<()> {
-        log::info!("Setting route: output {} -> input {}", output, input);
+        log::info!("Setting route: output {output} -> input {input}");
 
         let route = Route {
             to_output: output,
@@ -171,7 +171,7 @@ impl VideohubClient {
 
     // Set an input label
     pub async fn set_input_label(&mut self, input: u32, label: String) -> Result<()> {
-        log::info!("Setting input {} label to: {}", input, label);
+        log::info!("Setting input {input} label to: {label}");
 
         let label_msg = Label {
             id: input,
@@ -186,7 +186,7 @@ impl VideohubClient {
 
     // Set an output label
     pub async fn set_output_label(&mut self, output: u32, label: String) -> Result<()> {
-        log::info!("Setting output {} label to: {}", output, label);
+        log::info!("Setting output {output} label to: {label}");
 
         let label_msg = Label {
             id: output,
