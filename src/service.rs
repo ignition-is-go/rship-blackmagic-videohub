@@ -85,20 +85,20 @@ impl VideohubService {
 
         // Keep the service running indefinitely
         log::info!("Service started successfully, running indefinitely...");
-        loop {
-            tokio::time::sleep(Duration::from_secs(30)).await;
-            log::debug!("Service heartbeat - still running");
-        }
+        std::future::pending::<()>().await;
+        
+        // This line is never reached, but needed for type checking
+        Ok(())
     }
 
     async fn setup_rship_connection(&self) -> Result<()> {
         let url = format!("ws://{}:{}/myko", self.rship_address, self.rship_port);
-        log::info!("Connecting to rship at: {}", url);
+        log::debug!("Connecting to rship at: {}", url);
 
         self.sdk_client.set_address(Some(url));
         self.sdk_client.await_connection().await;
 
-        log::info!("Connected to rship successfully");
+        log::debug!("Connected to rship successfully");
         Ok(())
     }
 
@@ -231,10 +231,10 @@ impl VideohubService {
 
         // Start the event emission task with the emitters
         tokio::spawn(async move {
-            log::info!("Event emission task started");
+            log::debug!("Event emission task started");
 
             while let Some(event) = event_rx.recv().await {
-                log::debug!("Processing event: {:?}", event);
+                log::debug!("Processing event");
 
                 match event {
                     VideohubEvent::Route {
@@ -297,7 +297,7 @@ impl VideohubService {
             }
         });
 
-        log::info!("rship instance and targets setup complete");
+        log::debug!("rship instance and targets setup complete");
         Ok(())
     }
 
@@ -318,7 +318,7 @@ impl VideohubService {
                 return;
             }
 
-            log::info!("Videohub client task started");
+            log::debug!("Videohub client task started");
 
             // Track current state to detect changes
             let mut current_device_info: Option<DeviceInfo> = None;
@@ -355,7 +355,7 @@ impl VideohubService {
                     message_result = client.receive_message() => {
                         match message_result {
                             Ok(Some(message)) => {
-                                log::debug!("Received videohub message: {:?}", message);
+                                log::debug!("Received videohub message");
 
                                 // Process messages and emit events on changes
                                 match &message {
