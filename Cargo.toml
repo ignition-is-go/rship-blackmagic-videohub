@@ -1,0 +1,9 @@
+[package]
+name = "rship-blackmagic-videohub"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rs-macros = "0.1.0"
+rship-sdk = "0.1.18"
+videohub = "1.0.1"
