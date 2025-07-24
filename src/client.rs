@@ -36,7 +36,7 @@ impl VideohubClient {
 
     // Connect to the videohub device
     pub async fn connect(&mut self) -> Result<()> {
-        log::info!("Connecting to videohub at {}:{}", self.host, self.port);
+        log::debug!("Connecting to videohub at {}:{}", self.host, self.port);
 
         let stream = TcpStream::connect(format!("{}:{}", self.host, self.port)).await?;
         let framed = Framed::new(stream, VideohubCodec);
@@ -44,7 +44,7 @@ impl VideohubClient {
         self.connection = Some(framed);
         self.state.connected = true;
 
-        log::info!("Connected to videohub successfully");
+        log::debug!("Connected to videohub successfully");
         Ok(())
     }
 
@@ -106,7 +106,12 @@ impl VideohubClient {
     fn handle_message(&mut self, message: &VideohubMessage) {
         match message {
             VideohubMessage::DeviceInfo(info) => {
-                log::info!("Received device info: {:?}", info);
+                log::info!("Device connected: {} | Inputs: {} | Outputs: {} | ID: {}", 
+                    info.model_name.as_deref().unwrap_or("Unknown"),
+                    info.video_inputs.unwrap_or(0),
+                    info.video_outputs.unwrap_or(0),
+                    info.unique_id.as_deref().unwrap_or("Unknown")
+                );
                 self.state.device_info = Some(info.clone());
             }
             VideohubMessage::InputLabels(labels) => {
