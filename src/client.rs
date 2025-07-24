@@ -6,8 +6,7 @@ use tokio_util::codec::Framed;
 use videohub::{DeviceInfo, Label, Route, VideohubCodec, VideohubMessage};
 
 // Represents the current state of a Videohub device
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct VideohubState {
     pub device_info: Option<DeviceInfo>,
     pub input_labels: HashMap<u32, String>,
@@ -106,7 +105,8 @@ impl VideohubClient {
     fn handle_message(&mut self, message: &VideohubMessage) {
         match message {
             VideohubMessage::DeviceInfo(info) => {
-                log::info!("Device connected: {} | Inputs: {} | Outputs: {} | ID: {}", 
+                log::info!(
+                    "Device connected: {} | Inputs: {} | Outputs: {} | ID: {}",
                     info.model_name.as_deref().unwrap_or("Unknown"),
                     info.video_inputs.unwrap_or(0),
                     info.video_outputs.unwrap_or(0),

@@ -86,7 +86,7 @@ impl VideohubService {
         // Keep the service running indefinitely
         log::info!("Service started successfully, running indefinitely...");
         std::future::pending::<()>().await;
-        
+
         // This line is never reached, but needed for type checking
         Ok(())
     }
