@@ -1,6 +1,6 @@
 # rship-blackmagic-videohub
 
-[![CI](https://github.com/ignition-is-go/rship-blackmagic-videohub/workflows/CI/badge.svg)](https://github.com/ignition-is-go/rship-blackmagic-videohub/actions)
+[![CI](https://github.com/ignition-is-go/rship-blackmagic-videohub/actions/workflows/ci.yml/badge.svg)](https://github.com/ignition-is-go/rship-blackmagic-videohub/actions)
 [![Crates.io](https://img.shields.io/crates/v/rship-blackmagic-videohub)](https://crates.io/crates/rship-blackmagic-videohub)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
