@@ -6,7 +6,9 @@
 
 ```bash
 git clone https://github.com/ignition-is-go/rship-blackmagic-videohub
+
 cp .env.example .env
+
 cargo run
 ```
 
