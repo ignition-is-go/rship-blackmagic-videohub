@@ -2,6 +2,13 @@
 name = "rship-blackmagic-videohub"
 version = "0.1.0"
 edition = "2024"
+authors = ["max@lucid.rocks"]
+description = "rship executor for controlling Blackmagic Videohub devices"
+repository = "https://github.com/ignition-is-go/rship-blackmagic-videohub"
+license = "MIT"
+keywords = ["rship", "blackmagic", "videohub", "video", "routing"]
+categories = ["multimedia::video", "network-programming"]
+readme = "README.md"
 
 [dependencies]
 rs-macros = "0.1.0"
