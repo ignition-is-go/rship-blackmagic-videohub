@@ -1,5 +1,9 @@
 # rship-blackmagic-videohub
 
+[![CI](https://github.com/ignition-is-go/rship-blackmagic-videohub/workflows/CI/badge.svg)](https://github.com/ignition-is-go/rship-blackmagic-videohub/actions)
+[![Crates.io](https://img.shields.io/crates/v/rship-blackmagic-videohub)](https://crates.io/crates/rship-blackmagic-videohub)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 [rship](https://docs.rship.io) executor for controlling [Blackmagic Videohub](https://www.blackmagicdesign.com/products/smartvideohub) devices. Bridges rship with Videohub routers for remote video routing control.
 
 ## Quickstart
@@ -29,6 +33,15 @@ cargo run
 - **`route-changed`**: Route updates (`output`, `input`, labels)
 - **`device-status`**: Connection and device info (`connected`, `model_name`, port counts)
 - **`label-changed`**: Label updates (`port_type`, `port`, `label`)
+
+## Development
+
+```bash
+cargo fmt --all        # Format code
+cargo clippy           # Lint code
+cargo test             # Run tests
+cargo run              # Run the service
+```
 
 ## Dependencies
 
