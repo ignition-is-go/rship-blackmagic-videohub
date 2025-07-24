@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::env;
 
-mod videohub;
+mod client;
 mod service;
 mod actions;
 mod emitters;
@@ -26,11 +26,11 @@ async fn main() -> Result<()> {
     let rship_address = env::var("RSHIP_ADDRESS").unwrap_or_else(|_| "nyc.rship.io".to_string());
     let rship_port = env::var("RSHIP_PORT").unwrap_or_else(|_| "5155".to_string());
     
-    log::info!("Starting rship-blackmagic-videohub executor");
+    log::info!("Starting rship-blackmagic-videohub service");
     log::info!("Videohub: {}:{}", videohub_host, videohub_port);
     log::info!("Rship: {}:{}", rship_address, rship_port);
     
-    // Create and start the executor
+    // Create and start the service
     let service = VideohubService::new(
         videohub_host,
         videohub_port,

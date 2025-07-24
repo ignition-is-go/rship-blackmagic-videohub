@@ -6,7 +6,7 @@ use tokio::sync::mpsc;
 use tokio::time::{interval, Duration};
 use videohub::{DeviceInfo, VideohubMessage};
 
-use crate::videohub::VideohubClient;
+use crate::client::VideohubClient;
 use crate::actions::{SetRouteAction, SetInputLabelAction, SetOutputLabelAction};
 use crate::emitters::{RouteChangedEmitter, DeviceStatusEmitter, LabelChangedEmitter};
 
