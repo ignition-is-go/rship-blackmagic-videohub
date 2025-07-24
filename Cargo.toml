@@ -7,3 +7,13 @@ edition = "2024"
 rs-macros = "0.1.0"
 rship-sdk = "0.1.18"
 videohub = "1.0.1"
+tokio = { version = "1.46", features = ["full"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+anyhow = "1.0"
+env_logger = "0.11"
+log = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+schemars = { version = "0.8", features = ["derive"] }
+futures-util = "0.3"
+dotenv = "0.15"
