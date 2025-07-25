@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/ignition-is-go/rship-blackmagic-videohub/actions/workflows/ci.yml/badge.svg)](https://github.com/ignition-is-go/rship-blackmagic-videohub/actions)
 [![Crates.io](https://img.shields.io/crates/v/rship-blackmagic-videohub)](https://crates.io/crates/rship-blackmagic-videohub)
+[![Documentation](https://docs.rs/rship-blackmagic-videohub/badge.svg)](https://docs.rs/rship-blackmagic-videohub)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 [rship](https://docs.rship.io) executor for controlling [Blackmagic Videohub](https://www.blackmagicdesign.com/products/smartvideohub) devices. Bridges rship with Videohub routers for remote video routing control.

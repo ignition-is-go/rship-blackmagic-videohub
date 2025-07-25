@@ -9,6 +9,7 @@ license = "MIT"
 keywords = ["rship", "blackmagic", "videohub", "video", "routing"]
 categories = ["multimedia::video", "network-programming"]
 readme = "README.md"
+documentation = "https://docs.rs/rship-blackmagic-videohub"
 
 [dependencies]
 rs-macros = "0.1.0"
