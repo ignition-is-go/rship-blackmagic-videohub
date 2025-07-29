@@ -13,6 +13,10 @@ jobs:
   check:
     name: Lint, Test & Build
     runs-on: ubuntu-latest
+
+    env:
+      GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+
     steps:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
@@ -31,3 +35,14 @@ jobs:
       
     - name: Build release
       run: cargo build --verbose --release
+
+    - name: Build docker
+      run: docker build -t ghcr.io/ignition-is-go/rship-blackmagic-videohub:latest .
+
+    - name: Login docker
+      run: echo $GITHUB_TOKEN | docker login ghcr.io -u workflow --password-stdin
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Publish docker
+      run: docker push ghcr.io/ignition-is-go/rship-blackmagic-videohub:latest
