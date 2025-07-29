@@ -11,7 +11,7 @@ env:
 
 jobs:
   check:
-    name: Lint, Test & Build
+    name: Run CI 
     runs-on: ubuntu-latest
 
     env:
