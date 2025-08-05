@@ -1,0 +1,13 @@
+# Copy this file to docker-compose.override.yml and customize the values
+# Docker Compose will automatically load docker-compose.override.yml if it exists
+
+version: '3.8'
+
+services:
+  rship-skaarhoj:
+    environment:
+      - RSHIP_ADDRESS=your-rship-server.com
+      - RSHIP_PORT=5155
+      - PANEL_ADDRESS=192.168.1.100
+      - PANEL_PORT=9923
+      - RUST_LOG=debug

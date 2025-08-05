@@ -27,3 +27,6 @@ target
 
 # Dotenv
 .env
+
+# Docker Compose override files (for local customization)
+docker-compose.override.yml
