@@ -13,7 +13,7 @@ documentation = "https://docs.rs/rship-blackmagic-videohub"
 
 [dependencies]
 rs-macros = "0.1.0"
-rship-sdk = "0.1.18"
+rship-sdk = "0.1"
 videohub = "1.0.1"
 tokio = { version = "1.46", features = ["full"] }
 tokio-util = { version = "0.7", features = ["codec"] }

@@ -1,5 +1,5 @@
 services:
-  videohub:
+  videohub-exec:
     build: .
     environment:
       - RSHIP_ADDRESS=${RSHIP_ADDRESS:-nyc.rship.io}

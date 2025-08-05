@@ -2,7 +2,7 @@
 # Docker Compose will automatically load docker-compose.override.yml if it exists
 
 services:
-  videohub:
+  videohub-exec:
     environment:
       - RSHIP_ADDRESS=your-rship-server.com
       - RSHIP_PORT=5155
