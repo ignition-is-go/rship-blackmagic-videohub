@@ -17,7 +17,7 @@ async fn main() -> Result<()> {
     env_logger::init();
 
     // Get configuration from environment variables
-    let videohub_host = env::var("VIDEOHUB_HOST").unwrap_or_else(|_| "localhost".to_string());
+    let videohub_address = env::var("VIDEOHUB_ADDRESS").unwrap_or_else(|_| "localhost".to_string());
     let videohub_port: u16 = env::var("VIDEOHUB_PORT")
         .unwrap_or_else(|_| "9990".to_string())
         .parse()
@@ -27,12 +27,12 @@ async fn main() -> Result<()> {
     let rship_port = env::var("RSHIP_PORT").unwrap_or_else(|_| "5155".to_string());
 
     log::info!("Starting rship-blackmagic-videohub service");
-    log::info!("Videohub: {videohub_host}:{videohub_port}");
+    log::info!("Videohub: {videohub_address}:{videohub_port}");
     log::info!("Rship: {rship_address}:{rship_port}");
 
     // Create and start the service
     let service =
-        VideohubService::new(videohub_host, videohub_port, rship_address, rship_port).await?;
+        VideohubService::new(videohub_address, videohub_port, rship_address, rship_port).await?;
 
     service.start().await?;
 

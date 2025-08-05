@@ -27,3 +27,21 @@ pub struct SetOutputLabelAction {
     // New label for the output
     pub label: String,
 }
+
+// Action data for setting output lock state
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct SetOutputLockAction {
+    // Output port number (0-indexed)
+    pub output: u32,
+    // Whether to lock the output
+    pub locked: bool,
+}
+
+// Action data for setting take mode on an output
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct SetTakeModeAction {
+    // Output port number (0-indexed)
+    pub output: u32,
+    // Whether to enable take mode
+    pub enabled: bool,
+}

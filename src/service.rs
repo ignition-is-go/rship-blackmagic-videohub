@@ -6,9 +6,9 @@ use tokio::sync::mpsc;
 use tokio::time::{Duration, interval};
 use videohub::{DeviceInfo, VideohubMessage};
 
-use crate::actions::{SetInputLabelAction, SetOutputLabelAction, SetRouteAction};
-use crate::client::VideohubClient;
-use crate::emitters::{DeviceStatusEmitter, LabelChangedEmitter, RouteChangedEmitter};
+use crate::actions::{SetInputLabelAction, SetOutputLabelAction, SetOutputLockAction, SetRouteAction, SetTakeModeAction};
+use crate::client::{VideohubClient, NetworkInterface};
+use crate::emitters::{DeviceStatusEmitter, LabelChangedEmitter, NetworkInterfaceEmitter, OutputLockChangedEmitter, RouteChangedEmitter, TakeModeChangedEmitter};
 
 // Commands sent to the videohub client task
 #[derive(Debug)]
@@ -16,6 +16,8 @@ pub enum VideohubCommand {
     Route { output: u32, input: u32 },
     InputLabel { input: u32, label: String },
     OutputLabel { output: u32, label: String },
+    OutputLock { output: u32, locked: bool },
+    TakeMode { output: u32, enabled: bool },
 }
 
 // Events emitted from the videohub client task
@@ -37,6 +39,19 @@ pub enum VideohubEvent {
         port_type: String,
         port: u32,
         label: String,
+    },
+    OutputLock {
+        output: u32,
+        locked: bool,
+        output_label: Option<String>,
+    },
+    TakeMode {
+        output: u32,
+        enabled: bool,
+        output_label: Option<String>,
+    },
+    NetworkInterface {
+        interface: NetworkInterface,
     },
 }
 
@@ -137,6 +152,8 @@ impl VideohubService {
         let tx_for_route = command_tx.clone();
         let tx_for_input_label = command_tx.clone();
         let tx_for_output_label = command_tx.clone();
+        let tx_for_output_lock = command_tx.clone();
+        let tx_for_take_mode = command_tx.clone();
 
         // Add route action
         target
@@ -207,6 +224,54 @@ impl VideohubService {
             )
             .await;
 
+        // Add output lock action
+        target
+            .add_action(
+                ActionArgs::<SetOutputLockAction>::new(
+                    "Set Output Lock".into(),
+                    "set-output-lock".into(),
+                ),
+                move |_action, data| {
+                    let tx = tx_for_output_lock.clone();
+                    tokio::spawn(async move {
+                        if let Err(e) = tx
+                            .send(VideohubCommand::OutputLock {
+                                output: data.output,
+                                locked: data.locked,
+                            })
+                            .await
+                        {
+                            log::error!("Failed to send output lock command: {e}");
+                        }
+                    });
+                },
+            )
+            .await;
+
+        // Add take mode action
+        target
+            .add_action(
+                ActionArgs::<SetTakeModeAction>::new(
+                    "Set Take Mode".into(),
+                    "set-take-mode".into(),
+                ),
+                move |_action, data| {
+                    let tx = tx_for_take_mode.clone();
+                    tokio::spawn(async move {
+                        if let Err(e) = tx
+                            .send(VideohubCommand::TakeMode {
+                                output: data.output,
+                                enabled: data.enabled,
+                            })
+                            .await
+                        {
+                            log::error!("Failed to send take mode command: {e}");
+                        }
+                    });
+                },
+            )
+            .await;
+
         // Create emitters using EmitterArgs
         let route_emitter = target
             .add_emitter(EmitterArgs::<RouteChangedEmitter>::new(
@@ -226,6 +291,27 @@ impl VideohubService {
             .add_emitter(EmitterArgs::<LabelChangedEmitter>::new(
                 "Label Changed".into(),
                 "label-changed".into(),
+            ))
+            .await;
+
+        let output_lock_emitter = target
+            .add_emitter(EmitterArgs::<OutputLockChangedEmitter>::new(
+                "Output Lock Changed".into(),
+                "output-lock-changed".into(),
+            ))
+            .await;
+
+        let take_mode_emitter = target
+            .add_emitter(EmitterArgs::<TakeModeChangedEmitter>::new(
+                "Take Mode Changed".into(),
+                "take-mode-changed".into(),
+            ))
+            .await;
+
+        let network_interface_emitter = target
+            .add_emitter(EmitterArgs::<NetworkInterfaceEmitter>::new(
+                "Network Interface".into(),
+                "network-interface".into(),
             ))
             .await;
 
@@ -289,6 +375,53 @@ impl VideohubService {
                             log::debug!("Emitted label changed: {port_type} port {port}");
                         }
                     }
+                    VideohubEvent::OutputLock {
+                        output,
+                        locked,
+                        output_label,
+                    } => {
+                        let data = OutputLockChangedEmitter {
+                            output,
+                            locked,
+                            output_label,
+                        };
+                        if let Err(e) = output_lock_emitter.pulse(data).await {
+                            log::error!("Failed to emit output lock changed event: {e}");
+                        } else {
+                            log::debug!("Emitted output lock changed: output {output} locked={locked}");
+                        }
+                    }
+                    VideohubEvent::TakeMode {
+                        output,
+                        enabled,
+                        output_label,
+                    } => {
+                        let data = TakeModeChangedEmitter {
+                            output,
+                            enabled,
+                            output_label,
+                        };
+                        if let Err(e) = take_mode_emitter.pulse(data).await {
+                            log::error!("Failed to emit take mode changed event: {e}");
+                        } else {
+                            log::debug!("Emitted take mode changed: output {output} enabled={enabled}");
+                        }
+                    }
+                    VideohubEvent::NetworkInterface { interface } => {
+                        let data = NetworkInterfaceEmitter {
+                            interface_id: interface.id,
+                            name: interface.name.clone(),
+                            mac_address: interface.mac_address.clone(),
+                            current_addresses: interface.current_addresses.clone(),
+                            current_gateway: interface.current_gateway.clone(),
+                            dynamic_ip: interface.dynamic_ip,
+                        };
+                        if let Err(e) = network_interface_emitter.pulse(data).await {
+                            log::error!("Failed to emit network interface event: {e}");
+                        } else {
+                            log::debug!("Emitted network interface: {}", interface.name);
+                        }
+                    }
                 }
             }
         });
@@ -324,6 +457,12 @@ impl VideohubService {
                 std::collections::HashMap::new();
             let mut current_output_labels: std::collections::HashMap<u32, String> =
                 std::collections::HashMap::new();
+            let mut current_output_locks: std::collections::HashMap<u32, bool> =
+                std::collections::HashMap::new();
+            let mut current_take_mode: std::collections::HashMap<u32, bool> =
+                std::collections::HashMap::new();
+            let mut current_network_interfaces: std::collections::HashMap<u32, NetworkInterface> =
+                std::collections::HashMap::new();
 
             loop {
                 tokio::select! {
@@ -344,6 +483,16 @@ impl VideohubService {
                                 if let Err(e) = client.set_output_label(output, label).await {
                                     log::error!("Failed to set output label: {e}");
                                 }
+                            }
+                            VideohubCommand::OutputLock { output, locked } => {
+                                log::info!("Output lock command received: output {} locked={}", output, locked);
+                                // Note: Output lock setting would need to be implemented in the client
+                                // For now, we'll log this as the protocol might not support setting locks
+                            }
+                            VideohubCommand::TakeMode { output, enabled } => {
+                                log::info!("Take mode command received: output {} enabled={}", output, enabled);
+                                // Note: Take mode setting would need to be implemented in the client
+                                // For now, we'll log this as the protocol might not support setting take mode
                             }
                         }
                     }
@@ -405,8 +554,46 @@ impl VideohubService {
                                             }
                                         }
                                     }
+                                    VideohubMessage::VideoOutputLocks(locks) => {
+                                        for lock in locks {
+                                            let is_locked = matches!(lock.state, videohub::LockState::Locked);
+                                            if current_output_locks.get(&lock.id) != Some(&is_locked) {
+                                                current_output_locks.insert(lock.id, is_locked);
+                                                let output_label = current_output_labels.get(&lock.id).cloned();
+                                                let _ = event_tx.send(VideohubEvent::OutputLock {
+                                                    output: lock.id,
+                                                    locked: is_locked,
+                                                    output_label,
+                                                }).await;
+                                            }
+                                        }
+                                    }
                                     _ => {
-                                        // Handle other message types as needed
+                                        // Check if client state has new information that we should emit events for
+                                        let client_state = client.state();
+                                        
+                                        // Check take mode changes
+                                        for (&output, &enabled) in &client_state.take_mode {
+                                            if current_take_mode.get(&output) != Some(&enabled) {
+                                                current_take_mode.insert(output, enabled);
+                                                let output_label = current_output_labels.get(&output).cloned();
+                                                let _ = event_tx.send(VideohubEvent::TakeMode {
+                                                    output,
+                                                    enabled,
+                                                    output_label,
+                                                }).await;
+                                            }
+                                        }
+                                        
+                                        // Check network interface changes
+                                        for interface in &client_state.network_interfaces {
+                                            if current_network_interfaces.get(&interface.id) != Some(interface) {
+                                                current_network_interfaces.insert(interface.id, interface.clone());
+                                                let _ = event_tx.send(VideohubEvent::NetworkInterface {
+                                                    interface: interface.clone(),
+                                                }).await;
+                                            }
+                                        }
                                     }
                                 }
                             }

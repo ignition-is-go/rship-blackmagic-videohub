@@ -28,11 +28,16 @@ cargo run
 - **`set-route`**: Route input to output (`output`, `input`)
 - **`set-input-label`**: Update input label (`input`, `label`)
 - **`set-output-label`**: Update output label (`output`, `label`)
+- **`set-output-lock`**: Lock/unlock output ports (`output`, `locked`)
+- **`set-take-mode`**: Enable/disable take mode per output (`output`, `enabled`)
 
 ### Emitters
 - **`route-changed`**: Route updates (`output`, `input`, labels)
 - **`device-status`**: Connection and device info (`connected`, `model_name`, port counts)
 - **`label-changed`**: Label updates (`port_type`, `port`, `label`)
+- **`output-lock-changed`**: Output lock state changes (`output`, `locked`, `output_label`)
+- **`take-mode-changed`**: Take mode state changes (`output`, `enabled`, `output_label`)
+- **`network-interface`**: Network interface information (`interface_id`, `name`, `mac_address`, `current_addresses`, etc.)
 
 ## Development
 

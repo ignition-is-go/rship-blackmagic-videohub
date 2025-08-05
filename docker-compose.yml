@@ -1,13 +1,11 @@
-version: '3.8'
-
 services:
-  rship-skaarhoj:
+  videohub:
     build: .
     environment:
       - RSHIP_ADDRESS=${RSHIP_ADDRESS:-nyc.rship.io}
       - RSHIP_PORT=${RSHIP_PORT:-5155}
-      - PANEL_ADDRESS=${PANEL_ADDRESS:-localhost}
-      - PANEL_PORT=${PANEL_PORT:-9923}
+      - VIDEOHUB_ADDRESS=${VIDEOHUB_ADDRESS:-localhost}
+      - VIDEOHUB_PORT=${VIDEOHUB_PORT:-9990}
       - RUST_LOG=${RUST_LOG:-info}
     network_mode: host
     restart: unless-stopped

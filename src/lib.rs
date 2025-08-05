@@ -11,6 +11,6 @@ pub mod emitters;
 pub mod service;
 
 // Re-export the main service and commonly used types
-pub use actions::{SetInputLabelAction, SetOutputLabelAction, SetRouteAction};
-pub use emitters::{DeviceStatusEmitter, LabelChangedEmitter, RouteChangedEmitter};
+pub use actions::{SetInputLabelAction, SetOutputLabelAction, SetOutputLockAction, SetRouteAction, SetTakeModeAction};
+pub use emitters::{DeviceStatusEmitter, LabelChangedEmitter, NetworkInterfaceEmitter, OutputLockChangedEmitter, RouteChangedEmitter, TakeModeChangedEmitter};
 pub use service::VideohubService;

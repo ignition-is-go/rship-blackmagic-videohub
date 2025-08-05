@@ -5,6 +5,19 @@ use tokio::net::TcpStream;
 use tokio_util::codec::Framed;
 use videohub::{DeviceInfo, Label, Route, VideohubCodec, VideohubMessage};
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct NetworkInterface {
+    pub id: u32,
+    pub name: String,
+    pub priority: Option<u32>,
+    pub mac_address: Option<String>,
+    pub dynamic_ip: Option<bool>,
+    pub current_addresses: Option<String>,
+    pub current_gateway: Option<String>,
+    pub static_addresses: Option<String>,
+    pub static_gateway: Option<String>,
+}
+
 // Represents the current state of a Videohub device
 #[derive(Debug, Clone, Default)]
 pub struct VideohubState {
@@ -12,6 +25,10 @@ pub struct VideohubState {
     pub input_labels: HashMap<u32, String>,
     pub output_labels: HashMap<u32, String>,
     pub video_output_routing: HashMap<u32, u32>, // output -> input
+    pub take_mode: HashMap<u32, bool>, // output -> take_mode_enabled
+    pub output_locks: HashMap<u32, bool>, // output -> locked
+    pub protocol_version: Option<String>,
+    pub network_interfaces: Vec<NetworkInterface>,
     pub connected: bool,
 }
 
@@ -148,6 +165,56 @@ impl VideohubClient {
             VideohubMessage::Ping => {
                 log::debug!("Received ping");
             }
+            VideohubMessage::Configuration(settings) => {
+                log::debug!("Received configuration: {} settings", settings.len());
+                for setting in settings {
+                    log::debug!("Configuration setting: {} = {}", setting.setting, setting.value);
+                }
+            }
+            VideohubMessage::EndPrelude => {
+                log::debug!("Received end of prelude - device initialization complete");
+            }
+            VideohubMessage::Preamble(preamble) => {
+                log::debug!("Received protocol preamble: version {}", preamble.version);
+                self.state.protocol_version = Some(preamble.version.clone());
+            }
+            VideohubMessage::VideoOutputLocks(locks) => {
+                log::debug!("Received video output locks: {} locks", locks.len());
+                self.state.output_locks.clear();
+                for lock in locks {
+                    let is_locked = matches!(lock.state, videohub::LockState::Locked);
+                    self.state.output_locks.insert(lock.id, is_locked);
+                    log::debug!("Output {} lock state: {}", lock.id, if is_locked { "locked" } else { "unlocked" });
+                }
+            }
+            VideohubMessage::UnknownMessage(header, body) => {
+                let header_str = String::from_utf8_lossy(header);
+                let body_str = String::from_utf8_lossy(body);
+                log::debug!("Received unknown message: {} with body: {}", header_str.trim(), body_str.trim());
+                
+                // Handle specific unknown messages that we can parse
+                match header_str.trim() {
+                    "TAKE MODE:" => {
+                        log::debug!("Processing take mode configuration");
+                        self.handle_take_mode(&body_str);
+                    }
+                    "NETWORK:" => {
+                        log::debug!("Processing network configuration");
+                        self.handle_network_config(&body_str);
+                    }
+                    header if header.starts_with("NETWORK INTERFACE ") => {
+                        if let Some(interface_id_str) = header.strip_prefix("NETWORK INTERFACE ").and_then(|s| s.strip_suffix(":")) {
+                            if let Ok(interface_id) = interface_id_str.parse::<u32>() {
+                                log::debug!("Processing network interface {} configuration", interface_id);
+                                self.handle_network_interface(interface_id, &body_str);
+                            }
+                        }
+                    }
+                    _ => {
+                        log::debug!("Unhandled unknown message: {}", header_str.trim());
+                    }
+                }
+            }
             _ => {
                 log::debug!("Received unhandled message: {message:?}");
             }
@@ -208,5 +275,88 @@ impl VideohubClient {
         let message = VideohubMessage::Ping;
         self.send_message(message).await?;
         Ok(())
+    }
+
+    // Handle take mode configuration from unknown message
+    fn handle_take_mode(&mut self, body: &str) {
+        self.state.take_mode.clear();
+        
+        for line in body.lines() {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 2 {
+                if let Ok(output_id) = parts[0].parse::<u32>() {
+                    let take_mode_enabled = parts[1] == "true";
+                    self.state.take_mode.insert(output_id, take_mode_enabled);
+                    log::debug!("Take mode for output {}: {}", output_id, take_mode_enabled);
+                }
+            }
+        }
+        
+        log::info!("Updated take mode configuration for {} outputs", self.state.take_mode.len());
+    }
+
+    // Handle network configuration from unknown message
+    fn handle_network_config(&mut self, body: &str) {
+        log::debug!("Processing network configuration");
+        for line in body.lines() {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            
+            if let Some((key, value)) = line.split_once(": ") {
+                log::debug!("Network config: {} = {}", key, value);
+            }
+        }
+    }
+
+    // Handle network interface configuration from unknown message
+    fn handle_network_interface(&mut self, interface_id: u32, body: &str) {
+        let mut interface = NetworkInterface {
+            id: interface_id,
+            name: String::new(),
+            priority: None,
+            mac_address: None,
+            dynamic_ip: None,
+            current_addresses: None,
+            current_gateway: None,
+            static_addresses: None,
+            static_gateway: None,
+        };
+
+        for line in body.lines() {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            
+            if let Some((key, value)) = line.split_once(": ") {
+                match key {
+                    "Name" => interface.name = value.to_string(),
+                    "Priority" => interface.priority = value.parse().ok(),
+                    "MAC Address" => interface.mac_address = Some(value.to_string()),
+                    "Dynamic IP" => interface.dynamic_ip = Some(value == "true"),
+                    "Current Addresses" => interface.current_addresses = Some(value.to_string()),
+                    "Current Gateway" => interface.current_gateway = Some(value.to_string()),
+                    "Static Addresses" => interface.static_addresses = Some(value.to_string()),
+                    "Static Gateway" => interface.static_gateway = Some(value.to_string()),
+                    _ => log::debug!("Unknown network interface field: {} = {}", key, value),
+                }
+            }
+        }
+
+        // Update or add the interface
+        if let Some(existing) = self.state.network_interfaces.iter_mut().find(|iface| iface.id == interface_id) {
+            *existing = interface;
+        } else {
+            self.state.network_interfaces.push(interface);
+        }
+
+        log::debug!("Updated network interface {}: {}", interface_id, self.state.network_interfaces.last().unwrap().name);
     }
 }
