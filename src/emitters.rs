@@ -1,6 +1,8 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+// DEVICE-LEVEL EMITTERS (for main device target - include output fields)
+
 // Emitter data for route changes
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RouteChangedEmitter {
@@ -75,4 +77,29 @@ pub struct NetworkInterfaceEmitter {
     pub current_gateway: Option<String>,
     // Whether using dynamic IP
     pub dynamic_ip: Option<bool>,
+}
+
+// OUTPUT-LEVEL EMITTERS (for output subtargets - NO output fields, output is implicit)
+
+// Emitter data for input changes on this output (output is implicit from target)
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct InputChangedEmitter {
+    // Input port number
+    pub input: u32,
+    // Optional input label
+    pub input_label: Option<String>,
+}
+
+// Emitter data for lock changes on this output (output is implicit from target)
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct LockChangedEmitter {
+    // Whether the output is locked
+    pub locked: bool,
+}
+
+// Emitter data for take mode changes on this output (output is implicit from target)
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct TakeModeOnThisOutputEmitter {
+    // Whether take mode is enabled
+    pub enabled: bool,
 }
