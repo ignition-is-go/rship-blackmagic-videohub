@@ -60,7 +60,7 @@ pub enum VideohubEvent {
 pub struct VideohubService {
     sdk_client: SdkClient,
     rship_address: String,
-    rship_port: String,
+    rship_port: u16,
     videohub_host: String,
     videohub_port: u16,
 }
@@ -70,7 +70,7 @@ impl VideohubService {
         videohub_host: String,
         videohub_port: u16,
         rship_address: String,
-        rship_port: String,
+        rship_port: u16,
     ) -> Result<Self> {
         let sdk_client = SdkClient::init();
 
