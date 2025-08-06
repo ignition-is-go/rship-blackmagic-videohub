@@ -318,9 +318,7 @@ impl VideohubService {
                         // Create output subtargets when we first receive device info
                         if connected && !targets_created {
                             if let Some(num_outputs) = video_outputs {
-                                log::info!(
-                                    "Creating {num_outputs} output subtargets dynamically"
-                                );
+                                log::info!("Creating {num_outputs} output subtargets dynamically");
 
                                 for output_id in 0..num_outputs {
                                     // Create output subtarget
@@ -568,10 +566,7 @@ impl VideohubService {
                             }
                         }
                     }
-                    VideohubEvent::OutputLock {
-                        output,
-                        locked,
-                    } => {
+                    VideohubEvent::OutputLock { output, locked } => {
                         let data = LockChangedEmitter { locked };
 
                         // Emit to the specific output subtarget
@@ -593,10 +588,7 @@ impl VideohubService {
                             );
                         }
                     }
-                    VideohubEvent::TakeMode {
-                        output,
-                        enabled,
-                    } => {
+                    VideohubEvent::TakeMode { output, enabled } => {
                         let data = TakeModeOnThisOutputEmitter { enabled };
 
                         // Emit to the specific output subtarget
