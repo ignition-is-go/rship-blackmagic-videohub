@@ -18,22 +18,36 @@ cargo run
 
 ## rship
 
-### Actions
+### Device-Level Actions
 
 - **`set-route`**: Route input to output (`output`, `input`)
-- **`set-input-label`**: Update input label (`input`, `label`)
 - **`set-output-label`**: Update output label (`output`, `label`)
 - **`set-output-lock`**: Lock/unlock output ports (`output`, `locked`)
 - **`set-take-mode`**: Enable/disable take mode per output (`output`, `enabled`)
 
-### Emitters
+### Output Subtarget Actions
 
-- **`route-changed`**: Route updates (`output`, `input`, labels)
-- **`device-status`**: Connection and device info (`connected`, `model_name`, port counts)
+Each output port also has individual actions:
+
+- **`set-input`**: Set input for this output (`input`)
+- **`set-input-label`**: Update input label (`input`, `label`)
+- **`set-label`**: Update this output's label (`label`)
+- **`set-lock`**: Lock/unlock this output (`locked`)
+- **`set-take-mode`**: Enable/disable take mode for this output (`enabled`)
+
+### Device-Level Emitters
+
+- **`device-status`**: Connection and device info (`connected`, `model_name`, `video_inputs`, `video_outputs`)
+- **`network-interface`**: Network interface information (`interface_id`, `name`, `mac_address`, `current_addresses`, `current_gateway`, `dynamic_ip`)
+
+### Output Subtarget Emitters
+
+Each output subtarget provides individual event notifications:
+
+- **`input-changed`**: Input routing updates (`input`, `input_label`)
 - **`label-changed`**: Label updates (`port_type`, `port`, `label`)
-- **`output-lock-changed`**: Output lock state changes (`output`, `locked`, `output_label`)
-- **`take-mode-changed`**: Take mode state changes (`output`, `enabled`, `output_label`)
-- **`network-interface`**: Network interface information (`interface_id`, `name`, `mac_address`, `current_addresses`, etc.)
+- **`lock-changed`**: Lock state changes (`locked`)
+- **`take-mode-changed`**: Take mode state changes (`enabled`)
 
 ## Development
 
