@@ -6,9 +6,16 @@ use tokio::sync::mpsc;
 use tokio::time::{Duration, interval};
 use videohub::{DeviceInfo, VideohubMessage};
 
-use crate::actions::{SetInputAction, SetInputLabelAction, SetLabelAction, SetLockAction, SetOutputLabelAction, SetOutputLockAction, SetRouteAction, SetTakeModeAction, SetTakeModeOnThisOutputAction};
-use crate::client::{VideohubClient, NetworkInterface};
-use crate::emitters::{DeviceStatusEmitter, InputChangedEmitter, LabelChangedEmitter, LockChangedEmitter, NetworkInterfaceEmitter, OutputLockChangedEmitter, RouteChangedEmitter, TakeModeChangedEmitter, TakeModeOnThisOutputEmitter};
+use crate::actions::{
+    SetInputAction, SetInputLabelAction, SetLabelAction, SetLockAction, SetOutputLabelAction,
+    SetOutputLockAction, SetRouteAction, SetTakeModeAction, SetTakeModeOnThisOutputAction,
+};
+use crate::client::{NetworkInterface, VideohubClient};
+use crate::emitters::{
+    DeviceStatusEmitter, InputChangedEmitter, LabelChangedEmitter, LockChangedEmitter,
+    NetworkInterfaceEmitter, OutputLockChangedEmitter, RouteChangedEmitter, TakeModeChangedEmitter,
+    TakeModeOnThisOutputEmitter,
+};
 
 // Commands sent to the videohub client task
 #[derive(Debug)]
@@ -269,11 +276,11 @@ impl VideohubService {
         // Store instance and device target for dynamic subtarget creation
         let instance_for_subtargets = instance.clone();
         let device_target_for_subtargets = device_target.clone();
-        
+
         // Start the event emission task with dynamic output target support
         tokio::spawn(async move {
             log::debug!("Event emission task started");
-            
+
             // Dynamic storage for output emitters - will be populated when device info is received
             let mut output_emitters = Vec::new();
             let mut targets_created = false;
@@ -291,8 +298,11 @@ impl VideohubService {
                         // Create output subtargets when we first receive device info
                         if connected && !targets_created {
                             if let Some(num_outputs) = video_outputs {
-                                log::info!("Creating {} output subtargets dynamically", num_outputs);
-                                
+                                log::info!(
+                                    "Creating {} output subtargets dynamically",
+                                    num_outputs
+                                );
+
                                 for output_id in 0..num_outputs {
                                     // Create output subtarget
                                     let mut output_target = instance_for_subtargets
@@ -300,20 +310,28 @@ impl VideohubService {
                                             name: format!("Output {}", output_id),
                                             short_id: format!("output-{}", output_id),
                                             category: "video".into(),
-                                            parent_targets: Some(vec![device_target_for_subtargets.clone()]),
+                                            parent_targets: Some(vec![
+                                                device_target_for_subtargets.clone(),
+                                            ]),
                                         })
                                         .await;
 
                                     // Add all actions to each output subtarget
                                     let output_tx_for_route = command_tx_for_subtargets.clone();
-                                    let output_tx_for_input_label = command_tx_for_subtargets.clone();
-                                    let output_tx_for_output_label = command_tx_for_subtargets.clone();
-                                    let output_tx_for_output_lock = command_tx_for_subtargets.clone();  
+                                    let output_tx_for_input_label =
+                                        command_tx_for_subtargets.clone();
+                                    let output_tx_for_output_label =
+                                        command_tx_for_subtargets.clone();
+                                    let output_tx_for_output_lock =
+                                        command_tx_for_subtargets.clone();
                                     let output_tx_for_take_mode = command_tx_for_subtargets.clone();
 
                                     output_target
                                         .add_action(
-                                            ActionArgs::<SetInputAction>::new("Set Input".into(), "set-input".into()),
+                                            ActionArgs::<SetInputAction>::new(
+                                                "Set Input".into(),
+                                                "set-input".into(),
+                                            ),
                                             move |_action, data| {
                                                 let tx = output_tx_for_route.clone();
                                                 let current_output_id = output_id;
@@ -325,7 +343,9 @@ impl VideohubService {
                                                         })
                                                         .await
                                                     {
-                                                        log::error!("Failed to send set input command: {e}");
+                                                        log::error!(
+                                                            "Failed to send set input command: {e}"
+                                                        );
                                                     }
                                                 });
                                             },
@@ -420,7 +440,9 @@ impl VideohubService {
                                                         })
                                                         .await
                                                     {
-                                                        log::error!("Failed to send take mode command: {e}");
+                                                        log::error!(
+                                                            "Failed to send take mode command: {e}"
+                                                        );
                                                     }
                                                 });
                                             },
@@ -450,15 +472,22 @@ impl VideohubService {
                                         .await;
 
                                     let take_mode_emitter = output_target
-                                        .add_emitter(EmitterArgs::<TakeModeOnThisOutputEmitter>::new(
-                                            "Take Mode Changed".into(),
-                                            "take-mode-changed".into(),
-                                        ))
+                                        .add_emitter(
+                                            EmitterArgs::<TakeModeOnThisOutputEmitter>::new(
+                                                "Take Mode Changed".into(),
+                                                "take-mode-changed".into(),
+                                            ),
+                                        )
                                         .await;
 
-                                    output_emitters.push((input_changed_emitter, label_emitter, output_lock_emitter, take_mode_emitter));
+                                    output_emitters.push((
+                                        input_changed_emitter,
+                                        label_emitter,
+                                        output_lock_emitter,
+                                        take_mode_emitter,
+                                    ));
                                 }
-                                
+
                                 targets_created = true;
                                 log::info!("Created {} output subtargets", num_outputs);
                             }
@@ -482,20 +511,28 @@ impl VideohubService {
                         output_label,
                         input_label,
                     } => {
-                        let input_data = InputChangedEmitter {
-                            input,
-                            input_label,
-                        };
-                        
+                        let input_data = InputChangedEmitter { input, input_label };
+
                         // Emit to the specific output subtarget if it exists
-                        if let Some((input_changed_emitter, _, _, _)) = output_emitters.get(output as usize) {
+                        if let Some((input_changed_emitter, _, _, _)) =
+                            output_emitters.get(output as usize)
+                        {
                             if let Err(e) = input_changed_emitter.pulse(input_data).await {
-                                log::error!("Failed to emit input changed event on output {}: {e}", output);
+                                log::error!(
+                                    "Failed to emit input changed event on output {}: {e}",
+                                    output
+                                );
                             } else {
-                                log::debug!("Emitted input changed on output {}: input {input}", output);
+                                log::debug!(
+                                    "Emitted input changed on output {}: input {input}",
+                                    output
+                                );
                             }
                         } else {
-                            log::debug!("Output emitters not ready or output {} out of range", output);
+                            log::debug!(
+                                "Output emitters not ready or output {} out of range",
+                                output
+                            );
                         }
                     }
                     VideohubEvent::Label {
@@ -508,17 +545,28 @@ impl VideohubService {
                             port,
                             label: label.clone(),
                         };
-                        
+
                         // For output labels, emit to the specific output subtarget
                         if port_type == "output" {
-                            if let Some((_, label_emitter, _, _)) = output_emitters.get(port as usize) {
+                            if let Some((_, label_emitter, _, _)) =
+                                output_emitters.get(port as usize)
+                            {
                                 if let Err(e) = label_emitter.pulse(data).await {
-                                    log::error!("Failed to emit label changed event on output {}: {e}", port);
+                                    log::error!(
+                                        "Failed to emit label changed event on output {}: {e}",
+                                        port
+                                    );
                                 } else {
-                                    log::debug!("Emitted label changed on output {}: {port_type} port {port}", port);
+                                    log::debug!(
+                                        "Emitted label changed on output {}: {port_type} port {port}",
+                                        port
+                                    );
                                 }
                             } else {
-                                log::debug!("Output emitters not ready or output {} out of range for label", port);
+                                log::debug!(
+                                    "Output emitters not ready or output {} out of range for label",
+                                    port
+                                );
                             }
                         } else {
                             // For input labels, emit to the first available output target as an example
@@ -526,7 +574,9 @@ impl VideohubService {
                                 if let Err(e) = label_emitter.pulse(data).await {
                                     log::error!("Failed to emit input label changed event: {e}");
                                 } else {
-                                    log::debug!("Emitted input label changed: {port_type} port {port}");
+                                    log::debug!(
+                                        "Emitted input label changed: {port_type} port {port}"
+                                    );
                                 }
                             }
                         }
@@ -536,19 +586,28 @@ impl VideohubService {
                         locked,
                         output_label: _,
                     } => {
-                        let data = LockChangedEmitter {
-                            locked,
-                        };
-                        
+                        let data = LockChangedEmitter { locked };
+
                         // Emit to the specific output subtarget
-                        if let Some((_, _, output_lock_emitter, _)) = output_emitters.get(output as usize) {
+                        if let Some((_, _, output_lock_emitter, _)) =
+                            output_emitters.get(output as usize)
+                        {
                             if let Err(e) = output_lock_emitter.pulse(data).await {
-                                log::error!("Failed to emit lock changed event on output {}: {e}", output);
+                                log::error!(
+                                    "Failed to emit lock changed event on output {}: {e}",
+                                    output
+                                );
                             } else {
-                                log::debug!("Emitted lock changed on output {}: locked={locked}", output);
+                                log::debug!(
+                                    "Emitted lock changed on output {}: locked={locked}",
+                                    output
+                                );
                             }
                         } else {
-                            log::debug!("Output emitters not ready or output {} out of range for lock", output);
+                            log::debug!(
+                                "Output emitters not ready or output {} out of range for lock",
+                                output
+                            );
                         }
                     }
                     VideohubEvent::TakeMode {
@@ -556,19 +615,28 @@ impl VideohubService {
                         enabled,
                         output_label: _,
                     } => {
-                        let data = TakeModeOnThisOutputEmitter {
-                            enabled,
-                        };
-                        
+                        let data = TakeModeOnThisOutputEmitter { enabled };
+
                         // Emit to the specific output subtarget
-                        if let Some((_, _, _, take_mode_emitter)) = output_emitters.get(output as usize) {
+                        if let Some((_, _, _, take_mode_emitter)) =
+                            output_emitters.get(output as usize)
+                        {
                             if let Err(e) = take_mode_emitter.pulse(data).await {
-                                log::error!("Failed to emit take mode changed event on output {}: {e}", output);
+                                log::error!(
+                                    "Failed to emit take mode changed event on output {}: {e}",
+                                    output
+                                );
                             } else {
-                                log::debug!("Emitted take mode changed on output {}: enabled={enabled}", output);
+                                log::debug!(
+                                    "Emitted take mode changed on output {}: enabled={enabled}",
+                                    output
+                                );
                             }
                         } else {
-                            log::debug!("Output emitters not ready or output {} out of range for take mode", output);
+                            log::debug!(
+                                "Output emitters not ready or output {} out of range for take mode",
+                                output
+                            );
                         }
                     }
                     VideohubEvent::NetworkInterface { interface } => {
@@ -741,7 +809,7 @@ impl VideohubService {
                                     _ => {
                                         // Check if client state has new information that we should emit events for
                                         let client_state = client.state();
-                                        
+
                                         // Check take mode changes
                                         for (&output, &enabled) in &client_state.take_mode {
                                             if current_take_mode.get(&output) != Some(&enabled) {
@@ -754,7 +822,7 @@ impl VideohubService {
                                                 }).await;
                                             }
                                         }
-                                        
+
                                         // Check network interface changes
                                         for interface in &client_state.network_interfaces {
                                             if current_network_interfaces.get(&interface.id) != Some(interface) {

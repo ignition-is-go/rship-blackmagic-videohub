@@ -25,8 +25,8 @@ pub struct VideohubState {
     pub input_labels: HashMap<u32, String>,
     pub output_labels: HashMap<u32, String>,
     pub video_output_routing: HashMap<u32, u32>, // output -> input
-    pub take_mode: HashMap<u32, bool>, // output -> take_mode_enabled
-    pub output_locks: HashMap<u32, bool>, // output -> locked
+    pub take_mode: HashMap<u32, bool>,           // output -> take_mode_enabled
+    pub output_locks: HashMap<u32, bool>,        // output -> locked
     pub protocol_version: Option<String>,
     pub network_interfaces: Vec<NetworkInterface>,
     pub connected: bool,
@@ -168,7 +168,11 @@ impl VideohubClient {
             VideohubMessage::Configuration(settings) => {
                 log::debug!("Received configuration: {} settings", settings.len());
                 for setting in settings {
-                    log::debug!("Configuration setting: {} = {}", setting.setting, setting.value);
+                    log::debug!(
+                        "Configuration setting: {} = {}",
+                        setting.setting,
+                        setting.value
+                    );
                 }
             }
             VideohubMessage::EndPrelude => {
@@ -184,14 +188,22 @@ impl VideohubClient {
                 for lock in locks {
                     let is_locked = matches!(lock.state, videohub::LockState::Locked);
                     self.state.output_locks.insert(lock.id, is_locked);
-                    log::debug!("Output {} lock state: {}", lock.id, if is_locked { "locked" } else { "unlocked" });
+                    log::debug!(
+                        "Output {} lock state: {}",
+                        lock.id,
+                        if is_locked { "locked" } else { "unlocked" }
+                    );
                 }
             }
             VideohubMessage::UnknownMessage(header, body) => {
                 let header_str = String::from_utf8_lossy(header);
                 let body_str = String::from_utf8_lossy(body);
-                log::debug!("Received unknown message: {} with body: {}", header_str.trim(), body_str.trim());
-                
+                log::debug!(
+                    "Received unknown message: {} with body: {}",
+                    header_str.trim(),
+                    body_str.trim()
+                );
+
                 // Handle specific unknown messages that we can parse
                 match header_str.trim() {
                     "TAKE MODE:" => {
@@ -203,9 +215,15 @@ impl VideohubClient {
                         self.handle_network_config(&body_str);
                     }
                     header if header.starts_with("NETWORK INTERFACE ") => {
-                        if let Some(interface_id_str) = header.strip_prefix("NETWORK INTERFACE ").and_then(|s| s.strip_suffix(":")) {
+                        if let Some(interface_id_str) = header
+                            .strip_prefix("NETWORK INTERFACE ")
+                            .and_then(|s| s.strip_suffix(":"))
+                        {
                             if let Ok(interface_id) = interface_id_str.parse::<u32>() {
-                                log::debug!("Processing network interface {} configuration", interface_id);
+                                log::debug!(
+                                    "Processing network interface {} configuration",
+                                    interface_id
+                                );
                                 self.handle_network_interface(interface_id, &body_str);
                             }
                         }
@@ -280,13 +298,13 @@ impl VideohubClient {
     // Handle take mode configuration from unknown message
     fn handle_take_mode(&mut self, body: &str) {
         self.state.take_mode.clear();
-        
+
         for line in body.lines() {
             let line = line.trim();
             if line.is_empty() {
                 continue;
             }
-            
+
             let parts: Vec<&str> = line.split_whitespace().collect();
             if parts.len() >= 2 {
                 if let Ok(output_id) = parts[0].parse::<u32>() {
@@ -296,8 +314,11 @@ impl VideohubClient {
                 }
             }
         }
-        
-        log::info!("Updated take mode configuration for {} outputs", self.state.take_mode.len());
+
+        log::info!(
+            "Updated take mode configuration for {} outputs",
+            self.state.take_mode.len()
+        );
     }
 
     // Handle network configuration from unknown message
@@ -308,7 +329,7 @@ impl VideohubClient {
             if line.is_empty() {
                 continue;
             }
-            
+
             if let Some((key, value)) = line.split_once(": ") {
                 log::debug!("Network config: {} = {}", key, value);
             }
@@ -334,7 +355,7 @@ impl VideohubClient {
             if line.is_empty() {
                 continue;
             }
-            
+
             if let Some((key, value)) = line.split_once(": ") {
                 match key {
                     "Name" => interface.name = value.to_string(),
@@ -351,12 +372,21 @@ impl VideohubClient {
         }
 
         // Update or add the interface
-        if let Some(existing) = self.state.network_interfaces.iter_mut().find(|iface| iface.id == interface_id) {
+        if let Some(existing) = self
+            .state
+            .network_interfaces
+            .iter_mut()
+            .find(|iface| iface.id == interface_id)
+        {
             *existing = interface;
         } else {
             self.state.network_interfaces.push(interface);
         }
 
-        log::debug!("Updated network interface {}: {}", interface_id, self.state.network_interfaces.last().unwrap().name);
+        log::debug!(
+            "Updated network interface {}: {}",
+            interface_id,
+            self.state.network_interfaces.last().unwrap().name
+        );
     }
 }
