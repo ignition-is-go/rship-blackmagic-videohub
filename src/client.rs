@@ -221,8 +221,7 @@ impl VideohubClient {
                         {
                             if let Ok(interface_id) = interface_id_str.parse::<u32>() {
                                 log::debug!(
-                                    "Processing network interface {} configuration",
-                                    interface_id
+                                    "Processing network interface {interface_id} configuration"
                                 );
                                 self.handle_network_interface(interface_id, &body_str);
                             }
@@ -310,7 +309,7 @@ impl VideohubClient {
                 if let Ok(output_id) = parts[0].parse::<u32>() {
                     let take_mode_enabled = parts[1] == "true";
                     self.state.take_mode.insert(output_id, take_mode_enabled);
-                    log::debug!("Take mode for output {}: {}", output_id, take_mode_enabled);
+                    log::debug!("Take mode for output {output_id}: {take_mode_enabled}");
                 }
             }
         }
@@ -331,7 +330,7 @@ impl VideohubClient {
             }
 
             if let Some((key, value)) = line.split_once(": ") {
-                log::debug!("Network config: {} = {}", key, value);
+                log::debug!("Network config: {key} = {value}");
             }
         }
     }
@@ -366,7 +365,7 @@ impl VideohubClient {
                     "Current Gateway" => interface.current_gateway = Some(value.to_string()),
                     "Static Addresses" => interface.static_addresses = Some(value.to_string()),
                     "Static Gateway" => interface.static_gateway = Some(value.to_string()),
-                    _ => log::debug!("Unknown network interface field: {} = {}", key, value),
+                    _ => log::debug!("Unknown network interface field: {key} = {value}"),
                 }
             }
         }
@@ -384,8 +383,7 @@ impl VideohubClient {
         }
 
         log::debug!(
-            "Updated network interface {}: {}",
-            interface_id,
+            "Updated network interface {interface_id}: {}",
             self.state.network_interfaces.last().unwrap().name
         );
     }
