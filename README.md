@@ -16,15 +16,10 @@ cp .env.example .env
 cargo run
 ```
 
-## Features
-
-- Real-time video routing and label management
-- Device status monitoring  
-- Full rship integration with async architecture
-
-## rship Integration
+## rship
 
 ### Actions
+
 - **`set-route`**: Route input to output (`output`, `input`)
 - **`set-input-label`**: Update input label (`input`, `label`)
 - **`set-output-label`**: Update output label (`output`, `label`)
@@ -32,6 +27,7 @@ cargo run
 - **`set-take-mode`**: Enable/disable take mode per output (`output`, `enabled`)
 
 ### Emitters
+
 - **`route-changed`**: Route updates (`output`, `input`, labels)
 - **`device-status`**: Connection and device info (`connected`, `model_name`, port counts)
 - **`label-changed`**: Label updates (`port_type`, `port`, `label`)
