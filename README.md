@@ -21,16 +21,16 @@ cargo run
 ### Device-Level Actions
 
 - **`set-route`**: Route input to output (`output`, `input`)
+- **`set-input-label`**: Update input label (`input`, `label`) - global device setting
 - **`set-output-label`**: Update output label (`output`, `label`)
 - **`set-output-lock`**: Lock/unlock output ports (`output`, `locked`)
 - **`set-take-mode`**: Enable/disable take mode per output (`output`, `enabled`)
 
 ### Output Subtarget Actions
 
-Each output port also has individual actions:
+Each output port has actions:
 
 - **`set-input`**: Set input for this output (`input`)
-- **`set-input-label`**: Update input label (`input`, `label`)
 - **`set-label`**: Update this output's label (`label`)
 - **`set-lock`**: Lock/unlock this output (`locked`)
 - **`set-take-mode`**: Enable/disable take mode for this output (`enabled`)
@@ -52,10 +52,10 @@ Each output subtarget provides individual event notifications:
 ## Development
 
 ```bash
-cargo fmt --all                              # Format code
-cargo clippy --all-targets --all-features    # Lint code (CI runs with -D warnings)
-cargo test                                   # Run tests
-cargo run                                    # Run the service
+cargo fmt --all
+cargo clippy --all-targets --all-features -- -D warnings -A unused-variables -A dead-code -D warnings
+cargo test
+cargo build --release
 ```
 
 ## Dependencies
