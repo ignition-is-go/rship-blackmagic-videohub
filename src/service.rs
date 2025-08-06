@@ -130,13 +130,15 @@ impl VideohubService {
             .sdk_client
             .add_instance(InstanceArgs {
                 name: "Blackmagic Videohub".into(),
-                short_id: "blackmagic-videohub".into(),
+                short_id: "blackmagic-videohub-02".into(),
                 code: "blackmagic-videohub".into(),
-                service_id: "blackmagic-videohub-service".into(),
+                service_id: "blackmagic-videohub-service-02".into(),
                 cluster_id: None,
                 color: "#FF6B35".into(),
-                machine_id: format!("videohub-{}", std::process::id()),
-                message: Some("Blackmagic Videohub Controller".into()),
+                machine_id: hostname::get()
+                    .map(|h| h.to_string_lossy().into_owned())
+                    .unwrap_or_else(|_| "unknown-host".to_string()),
+                message: Some("Hello from Blackmagic Videohub!".into()),
                 status: rship_sdk::InstanceStatus::Available,
             })
             .await;
@@ -153,7 +155,6 @@ impl VideohubService {
 
         // Add all actions to the main device target
         let device_tx_for_route = command_tx.clone();
-        let device_tx_for_input_label = command_tx.clone();
         let device_tx_for_output_label = command_tx.clone();
         let device_tx_for_output_lock = command_tx.clone();
         let device_tx_for_take_mode = command_tx.clone();
@@ -172,29 +173,6 @@ impl VideohubService {
                             .await
                         {
                             log::error!("Failed to send route command: {e}");
-                        }
-                    });
-                },
-            )
-            .await;
-
-        device_target
-            .add_action(
-                ActionArgs::<SetInputLabelAction>::new(
-                    "Set Input Label".into(),
-                    "set-input-label".into(),
-                ),
-                move |_action, data| {
-                    let tx = device_tx_for_input_label.clone();
-                    tokio::spawn(async move {
-                        if let Err(e) = tx
-                            .send(VideohubCommand::InputLabel {
-                                input: data.input,
-                                label: data.label,
-                            })
-                            .await
-                        {
-                            log::error!("Failed to send input label command: {e}");
                         }
                     });
                 },
