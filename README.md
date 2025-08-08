@@ -16,6 +16,15 @@ cp .env.example .env
 cargo run
 ```
 
+## Development
+
+```bash
+cargo fmt --all
+cargo clippy --all-targets --all-features -- -D warnings -A unused-variables -A dead-code -D warnings
+cargo test
+cargo build --release
+```
+
 ## rship
 
 ### Device-Level Actions
@@ -48,15 +57,6 @@ Each output subtarget provides individual event notifications:
 - **`label-changed`**: Label updates (`port_type`, `port`, `label`)
 - **`lock-changed`**: Lock state changes (`locked`)
 - **`take-mode-changed`**: Take mode state changes (`enabled`)
-
-## Development
-
-```bash
-cargo fmt --all
-cargo clippy --all-targets --all-features -- -D warnings -A unused-variables -A dead-code -D warnings
-cargo test
-cargo build --release
-```
 
 ## Dependencies
 
