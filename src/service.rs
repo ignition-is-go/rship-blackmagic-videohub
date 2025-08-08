@@ -140,7 +140,7 @@ impl VideohubService {
                 color: "#FF6B35".into(),
                 machine_id: hostname::get()
                     .map(|h| h.to_string_lossy().into_owned())
-                    .unwrap_or_else(|_| "unknown-host".to_string()),
+                    .unwrap_or("unknown-host".to_string()),
                 message: Some("Hello from Blackmagic Videohub!".into()),
                 status: rship_sdk::InstanceStatus::Available,
             })
@@ -716,12 +716,14 @@ impl VideohubService {
                                     VideohubMessage::DeviceInfo(info) => {
                                         if current_device_info.as_ref() != Some(info) {
                                             current_device_info = Some(info.clone());
-                                            let _ = event_tx.send(VideohubEvent::DeviceStatus {
+                                            if let Err(e) = event_tx.send(VideohubEvent::DeviceStatus {
                                                 connected: true,
                                                 model_name: info.model_name.clone(),
                                                 video_inputs: info.video_inputs,
                                                 video_outputs: info.video_outputs,
-                                            }).await;
+                                            }).await {
+                                                log::error!("Failed to send device status event: {e}");
+                                            }
                                         }
                                     }
                                     VideohubMessage::VideoOutputRouting(routes) => {
@@ -729,11 +731,13 @@ impl VideohubService {
                                             if current_routes.get(&route.to_output) != Some(&route.from_input) {
                                                 current_routes.insert(route.to_output, route.from_input);
                                                 let input_label = current_input_labels.get(&route.from_input).cloned();
-                                                let _ = event_tx.send(VideohubEvent::Route {
+                                                if let Err(e) = event_tx.send(VideohubEvent::Route {
                                                     output: route.to_output,
                                                     input: route.from_input,
                                                     input_label,
-                                                }).await;
+                                                }).await {
+                                                    log::error!("Failed to send route event for output {} to input {}: {e}", route.to_output, route.from_input);
+                                                }
                                             }
                                         }
                                     }
@@ -741,11 +745,13 @@ impl VideohubService {
                                         for label in labels {
                                             if current_input_labels.get(&label.id) != Some(&label.name) {
                                                 current_input_labels.insert(label.id, label.name.clone());
-                                                let _ = event_tx.send(VideohubEvent::Label {
+                                                if let Err(e) = event_tx.send(VideohubEvent::Label {
                                                     port_type: "input".to_string(),
                                                     port: label.id,
                                                     label: label.name.clone(),
-                                                }).await;
+                                                }).await {
+                                                    log::error!("Failed to send input label event for input {}: {e}", label.id);
+                                                }
                                             }
                                         }
                                     }
@@ -753,11 +759,13 @@ impl VideohubService {
                                         for label in labels {
                                             if current_output_labels.get(&label.id) != Some(&label.name) {
                                                 current_output_labels.insert(label.id, label.name.clone());
-                                                let _ = event_tx.send(VideohubEvent::Label {
+                                                if let Err(e) = event_tx.send(VideohubEvent::Label {
                                                     port_type: "output".to_string(),
                                                     port: label.id,
                                                     label: label.name.clone(),
-                                                }).await;
+                                                }).await {
+                                                    log::error!("Failed to send output label event for output {}: {e}", label.id);
+                                                }
                                             }
                                         }
                                     }
@@ -766,10 +774,12 @@ impl VideohubService {
                                             let is_locked = matches!(lock.state, videohub::LockState::Locked);
                                             if current_output_locks.get(&lock.id) != Some(&is_locked) {
                                                 current_output_locks.insert(lock.id, is_locked);
-                                                let _ = event_tx.send(VideohubEvent::OutputLock {
+                                                if let Err(e) = event_tx.send(VideohubEvent::OutputLock {
                                                     output: lock.id,
                                                     locked: is_locked,
-                                                }).await;
+                                                }).await {
+                                                    log::error!("Failed to send output lock event for output {}: {e}", lock.id);
+                                                }
                                             }
                                         }
                                     }
@@ -781,10 +791,12 @@ impl VideohubService {
                                         for (&output, &enabled) in &client_state.take_mode {
                                             if current_take_mode.get(&output) != Some(&enabled) {
                                                 current_take_mode.insert(output, enabled);
-                                                let _ = event_tx.send(VideohubEvent::TakeMode {
+                                                if let Err(e) = event_tx.send(VideohubEvent::TakeMode {
                                                     output,
                                                     enabled,
-                                                }).await;
+                                                }).await {
+                                                    log::error!("Failed to send take mode event for output {}: {e}", output);
+                                                }
                                             }
                                         }
 
@@ -792,9 +804,11 @@ impl VideohubService {
                                         for interface in &client_state.network_interfaces {
                                             if current_network_interfaces.get(&interface.id) != Some(interface) {
                                                 current_network_interfaces.insert(interface.id, interface.clone());
-                                                let _ = event_tx.send(VideohubEvent::NetworkInterface {
+                                                if let Err(e) = event_tx.send(VideohubEvent::NetworkInterface {
                                                     interface: interface.clone(),
-                                                }).await;
+                                                }).await {
+                                                    log::error!("Failed to send network interface event for interface {}: {e}", interface.id);
+                                                }
                                             }
                                         }
                                     }
@@ -803,12 +817,14 @@ impl VideohubService {
                             Ok(None) => {
                                 log::warn!("Videohub connection closed, attempting to reconnect...");
                                 // Emit disconnection event
-                                let _ = event_tx.send(VideohubEvent::DeviceStatus {
+                                if let Err(e) = event_tx.send(VideohubEvent::DeviceStatus {
                                     connected: false,
                                     model_name: current_device_info.as_ref().and_then(|info| info.model_name.clone()),
                                     video_inputs: current_device_info.as_ref().and_then(|info| info.video_inputs),
                                     video_outputs: current_device_info.as_ref().and_then(|info| info.video_outputs),
-                                }).await;
+                                }).await {
+                                    log::error!("Failed to send device disconnection event: {e}");
+                                }
 
                                 tokio::time::sleep(Duration::from_secs(5)).await;
                                 if let Err(e) = client.connect().await {

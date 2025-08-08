@@ -68,7 +68,9 @@ impl VideohubClient {
     #[allow(dead_code)]
     pub async fn disconnect(&mut self) {
         if let Some(mut conn) = self.connection.take() {
-            let _ = conn.close().await;
+            if let Err(e) = conn.close().await {
+                log::warn!("Error closing videohub connection: {e}");
+            }
         }
         self.state.connected = false;
         log::info!("Disconnected from videohub");
@@ -81,7 +83,6 @@ impl VideohubClient {
     }
 
     // Get the current videohub state
-    #[allow(dead_code)]
     pub fn state(&self) -> &VideohubState {
         &self.state
     }
@@ -377,14 +378,14 @@ impl VideohubClient {
             .iter_mut()
             .find(|iface| iface.id == interface_id)
         {
-            *existing = interface;
+            *existing = interface.clone();
         } else {
-            self.state.network_interfaces.push(interface);
+            self.state.network_interfaces.push(interface.clone());
         }
 
         log::debug!(
             "Updated network interface {interface_id}: {}",
-            self.state.network_interfaces.last().unwrap().name
+            interface.name
         );
     }
 }
