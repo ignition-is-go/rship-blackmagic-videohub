@@ -1,6 +1,6 @@
 [package]
 name = "rship-blackmagic-videohub"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2024"
 authors = ["max@lucid.rocks"]
 description = "rship executor for controlling Blackmagic Videohub devices"
