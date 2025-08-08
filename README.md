@@ -9,6 +9,9 @@
 
 ## Quickstart
 
+- Setup and run the [VideoHub Simulator](https://github.com/peschuster/VideoHub-Simulator)
+- Setup and run rship-blackmagic-videohub
+
 ```bash
 git clone https://github.com/ignition-is-go/rship-blackmagic-videohub
 cd rship-blackmagic-videohub
