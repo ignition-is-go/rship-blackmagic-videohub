@@ -316,8 +316,8 @@ impl VideohubService {
                         video_outputs,
                     } => {
                         // Create output subtargets when we first receive device info
-                        if connected && !targets_created {
-                            if let Some(num_outputs) = video_outputs {
+                        match video_outputs {
+                            Some(num_outputs) if connected && !targets_created => {
                                 log::info!("Creating {num_outputs} output subtargets dynamically");
 
                                 for output_id in 0..num_outputs {
@@ -368,52 +368,56 @@ impl VideohubService {
                                         .await;
 
                                     output_target
-                                        .add_action(
-                                            ActionArgs::<SetLabelAction>::new(
-                                                "Set Label".into(),
-                                                "set-label".into(),
-                                            ),
-                                            move |_action, data| {
-                                                let tx = output_tx_for_output_label.clone();
-                                                let current_output_id = output_id;
-                                                tokio::spawn(async move {
-                                                    if let Err(e) = tx
-                                                        .send(VideohubCommand::OutputLabel {
-                                                            output: current_output_id,
-                                                            label: data.label,
-                                                        })
-                                                        .await
-                                                    {
-                                                        log::error!("Failed to send output label command: {e}");
-                                                    }
-                                                });
-                                            },
-                                        )
-                                        .await;
+                                    .add_action(
+                                        ActionArgs::<SetLabelAction>::new(
+                                            "Set Label".into(),
+                                            "set-label".into(),
+                                        ),
+                                        move |_action, data| {
+                                            let tx = output_tx_for_output_label.clone();
+                                            let current_output_id = output_id;
+                                            tokio::spawn(async move {
+                                                if let Err(e) = tx
+                                                    .send(VideohubCommand::OutputLabel {
+                                                        output: current_output_id,
+                                                        label: data.label,
+                                                    })
+                                                    .await
+                                                {
+                                                    log::error!(
+                                                        "Failed to send output label command: {e}"
+                                                    );
+                                                }
+                                            });
+                                        },
+                                    )
+                                    .await;
 
                                     output_target
-                                        .add_action(
-                                            ActionArgs::<SetLockAction>::new(
-                                                "Set Lock".into(),
-                                                "set-lock".into(),
-                                            ),
-                                            move |_action, data| {
-                                                let tx = output_tx_for_output_lock.clone();
-                                                let current_output_id = output_id;
-                                                tokio::spawn(async move {
-                                                    if let Err(e) = tx
-                                                        .send(VideohubCommand::OutputLock {
-                                                            output: current_output_id,
-                                                            locked: data.locked,
-                                                        })
-                                                        .await
-                                                    {
-                                                        log::error!("Failed to send output lock command: {e}");
-                                                    }
-                                                });
-                                            },
-                                        )
-                                        .await;
+                                    .add_action(
+                                        ActionArgs::<SetLockAction>::new(
+                                            "Set Lock".into(),
+                                            "set-lock".into(),
+                                        ),
+                                        move |_action, data| {
+                                            let tx = output_tx_for_output_lock.clone();
+                                            let current_output_id = output_id;
+                                            tokio::spawn(async move {
+                                                if let Err(e) = tx
+                                                    .send(VideohubCommand::OutputLock {
+                                                        output: current_output_id,
+                                                        locked: data.locked,
+                                                    })
+                                                    .await
+                                                {
+                                                    log::error!(
+                                                        "Failed to send output lock command: {e}"
+                                                    );
+                                                }
+                                            });
+                                        },
+                                    )
+                                    .await;
 
                                     output_target
                                         .add_action(
@@ -483,6 +487,7 @@ impl VideohubService {
                                 targets_created = true;
                                 log::info!("Created {num_outputs} output subtargets");
                             }
+                            _ => {}
                         }
 
                         let data = DeviceStatusEmitter {

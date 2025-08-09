@@ -68,9 +68,9 @@ impl VideohubClient {
     #[allow(dead_code)]
     pub async fn disconnect(&mut self) {
         if let Some(mut conn) = self.connection.take() {
-            if let Err(e) = conn.close().await {
+            let _ = conn.close().await.map_err(|e| {
                 log::warn!("Error closing videohub connection: {e}");
-            }
+            });
         }
         self.state.connected = false;
         log::info!("Disconnected from videohub");
@@ -216,16 +216,15 @@ impl VideohubClient {
                         self.handle_network_config(&body_str);
                     }
                     header if header.starts_with("NETWORK INTERFACE ") => {
-                        if let Some(interface_id_str) = header
+                        if let Some(interface_id) = header
                             .strip_prefix("NETWORK INTERFACE ")
                             .and_then(|s| s.strip_suffix(":"))
+                            .and_then(|s| s.parse::<u32>().ok())
                         {
-                            if let Ok(interface_id) = interface_id_str.parse::<u32>() {
-                                log::debug!(
-                                    "Processing network interface {interface_id} configuration"
-                                );
-                                self.handle_network_interface(interface_id, &body_str);
-                            }
+                            log::debug!(
+                                "Processing network interface {interface_id} configuration"
+                            );
+                            self.handle_network_interface(interface_id, &body_str);
                         }
                     }
                     _ => {
@@ -306,12 +305,13 @@ impl VideohubClient {
             }
 
             let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() >= 2 {
-                if let Ok(output_id) = parts[0].parse::<u32>() {
-                    let take_mode_enabled = parts[1] == "true";
-                    self.state.take_mode.insert(output_id, take_mode_enabled);
-                    log::debug!("Take mode for output {output_id}: {take_mode_enabled}");
-                }
+            if parts.len() < 2 {
+                continue;
+            }
+            if let Ok(output_id) = parts[0].parse::<u32>() {
+                let take_mode_enabled = parts[1] == "true";
+                self.state.take_mode.insert(output_id, take_mode_enabled);
+                log::debug!("Take mode for output {output_id}: {take_mode_enabled}");
             }
         }
 
