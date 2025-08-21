@@ -1,5 +1,7 @@
 //! Blackmagic Videohub Service - unified service handling both videohub connection and rship integration
 
+use std::u32;
+
 use anyhow::Result;
 use rship_sdk::{ActionArgs, EmitterArgs, InstanceArgs, SdkClient, TargetArgs};
 use tokio::sync::mpsc;
@@ -171,8 +173,8 @@ impl VideohubService {
                     tokio::spawn(async move {
                         if let Err(e) = tx
                             .send(VideohubCommand::Route {
-                                output: data.output,
-                                input: data.input,
+                                output: data.output.clamp(1, u32::MAX) - 1,
+                                input: data.input.clamp(1, u32::MAX) - 1,
                             })
                             .await
                         {
@@ -194,7 +196,7 @@ impl VideohubService {
                     tokio::spawn(async move {
                         if let Err(e) = tx
                             .send(VideohubCommand::InputLabel {
-                                input: data.input,
+                                input: data.input.clamp(1, u32::MAX) - 1,
                                 label: data.label,
                             })
                             .await
@@ -217,7 +219,7 @@ impl VideohubService {
                     tokio::spawn(async move {
                         if let Err(e) = tx
                             .send(VideohubCommand::OutputLabel {
-                                output: data.output,
+                                output: data.output.clamp(1, u32::MAX) - 1,
                                 label: data.label,
                             })
                             .await
@@ -240,7 +242,7 @@ impl VideohubService {
                     tokio::spawn(async move {
                         if let Err(e) = tx
                             .send(VideohubCommand::OutputLock {
-                                output: data.output,
+                                output: data.output.clamp(1, u32::MAX) - 1,
                                 locked: data.locked,
                             })
                             .await
@@ -263,7 +265,7 @@ impl VideohubService {
                     tokio::spawn(async move {
                         if let Err(e) = tx
                             .send(VideohubCommand::TakeMode {
-                                output: data.output,
+                                output: data.output.clamp(1, u32::MAX) - 1,
                                 enabled: data.enabled,
                             })
                             .await
@@ -320,7 +322,7 @@ impl VideohubService {
                             Some(num_outputs) if connected && !targets_created => {
                                 log::info!("Creating {num_outputs} output subtargets dynamically");
 
-                                for output_id in 0..num_outputs {
+                                for output_id in 1..num_outputs.clamp(0, u32::MAX - 1) + 1 {
                                     // Create output subtarget
                                     let mut output_target = instance_for_subtargets
                                         .add_target(TargetArgs {
@@ -354,7 +356,8 @@ impl VideohubService {
                                                     if let Err(e) = tx
                                                         .send(VideohubCommand::SetInput {
                                                             output: current_output_id,
-                                                            input: data.input,
+                                                            input: data.input.clamp(1, u32::MAX)
+                                                                - 1,
                                                         })
                                                         .await
                                                     {
