@@ -1,7 +1,5 @@
 //! Blackmagic Videohub Service - unified service handling both videohub connection and rship integration
 
-use std::u32;
-
 use anyhow::Result;
 use rship_sdk::{ActionArgs, EmitterArgs, InstanceArgs, SdkClient, TargetArgs};
 use tokio::sync::mpsc;
@@ -803,7 +801,7 @@ impl VideohubService {
                                                     output,
                                                     enabled,
                                                 }).await {
-                                                    log::error!("Failed to send take mode event for output {}: {e}", output);
+                                                    log::error!("Failed to send take mode event for output {output}: {e}");
                                                 }
                                             }
                                         }
