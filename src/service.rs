@@ -508,7 +508,10 @@ impl VideohubService {
                         input,
                         input_label,
                     } => {
-                        let input_data = InputChangedEmitter { input, input_label };
+                        let input_data = InputChangedEmitter {
+                            input: input + 1,
+                            input_label,
+                        };
 
                         // Emit to the specific output subtarget if it exists
                         if let Some((input_changed_emitter, _, _, _)) =
