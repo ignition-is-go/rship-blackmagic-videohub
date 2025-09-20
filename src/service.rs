@@ -95,18 +95,22 @@ impl VideohubService {
         // Create the mpsc channels for command and event communication
         let (command_tx, command_rx) = mpsc::channel::<VideohubCommand>(100);
         let (event_tx, event_rx) = mpsc::channel::<VideohubEvent>(100);
+        let (rship_reconnect_tx, rship_reconnect_rx) = mpsc::channel::<()>(10);
 
         // Setup the rship instance with both command and event handling
         self.setup_rship_instance(command_tx, event_rx).await?;
 
         // Start the videohub task
-        self.start_videohub_task(command_rx, event_tx).await?;
+        self.start_videohub_task(command_rx, event_tx, rship_reconnect_rx)
+            .await?;
+
+        // Start watching rship connection status for reconnections
+        self.start_connection_monitoring(rship_reconnect_tx).await?;
 
         // Keep the service running indefinitely
         log::info!("Service started successfully, running indefinitely...");
         std::future::pending::<()>().await;
 
-        // This line is never reached, but needed for type checking
         Ok(())
     }
 
@@ -647,6 +651,7 @@ impl VideohubService {
         &self,
         mut command_rx: mpsc::Receiver<VideohubCommand>,
         event_tx: mpsc::Sender<VideohubEvent>,
+        mut rship_reconnect_rx: mpsc::Receiver<()>,
     ) -> Result<()> {
         let host = self.videohub_host.clone();
         let port = self.videohub_port;
@@ -679,6 +684,11 @@ impl VideohubService {
 
             loop {
                 tokio::select! {
+                    // Handle rship reconnection
+                    Some(_) = rship_reconnect_rx.recv() => {
+                        log::info!("Rship reconnected - forcing full state refresh");
+                        client.force_full_state_refresh();
+                    }
                     // Handle incoming commands
                     Some(command) = command_rx.recv() => {
                         match command {
@@ -723,8 +733,12 @@ impl VideohubService {
                                 // Process messages and emit events on changes
                                 match &message {
                                     VideohubMessage::DeviceInfo(info) => {
-                                        if current_device_info.as_ref() != Some(info) {
-                                            current_device_info = Some(info.clone());
+                                        let should_emit = client.just_reconnected() ||
+                                            current_device_info.as_ref() != Some(info);
+
+                                        current_device_info = Some(info.clone());
+
+                                        if should_emit {
                                             if let Err(e) = event_tx.send(VideohubEvent::DeviceStatus {
                                                 connected: true,
                                                 model_name: info.model_name.clone(),
@@ -737,8 +751,12 @@ impl VideohubService {
                                     }
                                     VideohubMessage::VideoOutputRouting(routes) => {
                                         for route in routes {
-                                            if current_routes.get(&route.to_output) != Some(&route.from_input) {
-                                                current_routes.insert(route.to_output, route.from_input);
+                                            let should_emit = client.just_reconnected() ||
+                                                current_routes.get(&route.to_output) != Some(&route.from_input);
+
+                                            current_routes.insert(route.to_output, route.from_input);
+
+                                            if should_emit {
                                                 let input_label = current_input_labels.get(&route.from_input).cloned();
                                                 if let Err(e) = event_tx.send(VideohubEvent::Route {
                                                     output: route.to_output,
@@ -752,8 +770,12 @@ impl VideohubService {
                                     }
                                     VideohubMessage::InputLabels(labels) => {
                                         for label in labels {
-                                            if current_input_labels.get(&label.id) != Some(&label.name) {
-                                                current_input_labels.insert(label.id, label.name.clone());
+                                            let should_emit = client.just_reconnected() ||
+                                                current_input_labels.get(&label.id) != Some(&label.name);
+
+                                            current_input_labels.insert(label.id, label.name.clone());
+
+                                            if should_emit {
                                                 if let Err(e) = event_tx.send(VideohubEvent::Label {
                                                     port_type: "input".to_string(),
                                                     port: label.id,
@@ -766,8 +788,12 @@ impl VideohubService {
                                     }
                                     VideohubMessage::OutputLabels(labels) => {
                                         for label in labels {
-                                            if current_output_labels.get(&label.id) != Some(&label.name) {
-                                                current_output_labels.insert(label.id, label.name.clone());
+                                            let should_emit = client.just_reconnected() ||
+                                                current_output_labels.get(&label.id) != Some(&label.name);
+
+                                            current_output_labels.insert(label.id, label.name.clone());
+
+                                            if should_emit {
                                                 if let Err(e) = event_tx.send(VideohubEvent::Label {
                                                     port_type: "output".to_string(),
                                                     port: label.id,
@@ -781,8 +807,12 @@ impl VideohubService {
                                     VideohubMessage::VideoOutputLocks(locks) => {
                                         for lock in locks {
                                             let is_locked = matches!(lock.state, videohub::LockState::Locked);
-                                            if current_output_locks.get(&lock.id) != Some(&is_locked) {
-                                                current_output_locks.insert(lock.id, is_locked);
+                                            let should_emit = client.just_reconnected() ||
+                                                current_output_locks.get(&lock.id) != Some(&is_locked);
+
+                                            current_output_locks.insert(lock.id, is_locked);
+
+                                            if should_emit {
                                                 if let Err(e) = event_tx.send(VideohubEvent::OutputLock {
                                                     output: lock.id,
                                                     locked: is_locked,
@@ -792,14 +822,23 @@ impl VideohubService {
                                             }
                                         }
                                     }
+                                    VideohubMessage::EndPrelude => {
+                                        // Clear the reconnected flag after processing all initial state
+                                        client.clear_reconnected_flag();
+                                        log::debug!("Cleared reconnection flag after receiving full state");
+                                    }
                                     _ => {
                                         // Check if client state has new information that we should emit events for
                                         let client_state = client.state();
 
                                         // Check take mode changes
                                         for (&output, &enabled) in &client_state.take_mode {
-                                            if current_take_mode.get(&output) != Some(&enabled) {
-                                                current_take_mode.insert(output, enabled);
+                                            let should_emit = client.just_reconnected() ||
+                                                current_take_mode.get(&output) != Some(&enabled);
+
+                                            current_take_mode.insert(output, enabled);
+
+                                            if should_emit {
                                                 if let Err(e) = event_tx.send(VideohubEvent::TakeMode {
                                                     output,
                                                     enabled,
@@ -811,8 +850,12 @@ impl VideohubService {
 
                                         // Check network interface changes
                                         for interface in &client_state.network_interfaces {
-                                            if current_network_interfaces.get(&interface.id) != Some(interface) {
-                                                current_network_interfaces.insert(interface.id, interface.clone());
+                                            let should_emit = client.just_reconnected() ||
+                                                current_network_interfaces.get(&interface.id) != Some(interface);
+
+                                            current_network_interfaces.insert(interface.id, interface.clone());
+
+                                            if should_emit {
                                                 if let Err(e) = event_tx.send(VideohubEvent::NetworkInterface {
                                                     interface: interface.clone(),
                                                 }).await {
@@ -838,6 +881,8 @@ impl VideohubService {
                                 tokio::time::sleep(Duration::from_secs(5)).await;
                                 if let Err(e) = client.connect().await {
                                     log::error!("Failed to reconnect to videohub: {e}");
+                                } else {
+                                    log::info!("Reconnected to videohub - will emit full state on next messages");
                                 }
                             }
                             Err(e) => {
@@ -847,6 +892,44 @@ impl VideohubService {
                         }
                     }
                 }
+            }
+        });
+
+        Ok(())
+    }
+
+    async fn start_connection_monitoring(
+        &self,
+        rship_reconnect_tx: mpsc::Sender<()>,
+    ) -> Result<()> {
+        log::info!("Starting rship connection status monitoring");
+
+        let sdk_client = self.sdk_client.clone();
+        tokio::spawn(async move {
+            let mut was_connected = true; // Assume initially connected
+            let mut interval = interval(Duration::from_secs(5));
+
+            loop {
+                interval.tick().await;
+
+                // Check connection by trying await_connection with timeout
+                let connection_result =
+                    tokio::time::timeout(Duration::from_millis(100), sdk_client.await_connection())
+                        .await;
+
+                let is_connected = connection_result.is_ok();
+
+                if !was_connected && is_connected {
+                    log::info!("Rship SDK connection restored - triggering full state refresh");
+                    if let Err(e) = rship_reconnect_tx.send(()).await {
+                        log::error!("Failed to send rship reconnection signal: {e}");
+                        break;
+                    }
+                } else if was_connected && !is_connected {
+                    log::warn!("Rship SDK connection lost");
+                }
+
+                was_connected = is_connected;
             }
         });
 
@@ -867,10 +950,6 @@ impl VideohubService {
             }
         });
 
-        // Keep the main thread alive
-        loop {
-            tokio::time::sleep(Duration::from_secs(10)).await;
-            log::debug!("Executor running...");
-        }
+        Ok(())
     }
 }

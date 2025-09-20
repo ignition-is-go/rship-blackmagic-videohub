@@ -30,6 +30,7 @@ pub struct VideohubState {
     pub protocol_version: Option<String>,
     pub network_interfaces: Vec<NetworkInterface>,
     pub connected: bool,
+    pub reconnected: bool, // Flag to indicate if we just reconnected and need to send full state
 }
 
 // Client for communicating with a Blackmagic Videohub device
@@ -38,6 +39,7 @@ pub struct VideohubClient {
     port: u16,
     state: VideohubState,
     connection: Option<Framed<TcpStream, VideohubCodec>>,
+    initial_state_received: bool, // Track if we've received initial state after connection
 }
 
 impl VideohubClient {
@@ -47,6 +49,7 @@ impl VideohubClient {
             port,
             state: VideohubState::default(),
             connection: None,
+            initial_state_received: false,
         }
     }
 
@@ -59,6 +62,8 @@ impl VideohubClient {
 
         self.connection = Some(framed);
         self.state.connected = true;
+        self.state.reconnected = !self.initial_state_received; // Mark as reconnected if not first connection
+        self.initial_state_received = false; // Reset flag to track new connection state
 
         log::debug!("Connected to videohub successfully");
         Ok(())
@@ -73,6 +78,7 @@ impl VideohubClient {
             });
         }
         self.state.connected = false;
+        self.initial_state_received = false; // Reset on disconnect
         log::info!("Disconnected from videohub");
     }
 
@@ -178,6 +184,8 @@ impl VideohubClient {
             }
             VideohubMessage::EndPrelude => {
                 log::debug!("Received end of prelude - device initialization complete");
+                self.initial_state_received = true;
+                self.state.reconnected = false; // Clear reconnected flag after receiving full state
             }
             VideohubMessage::Preamble(preamble) => {
                 log::debug!("Received protocol preamble: version {}", preamble.version);
@@ -251,6 +259,22 @@ impl VideohubClient {
         self.send_message(message).await?;
 
         Ok(())
+    }
+
+    // Check if this client just reconnected and needs to send full state
+    pub fn just_reconnected(&self) -> bool {
+        self.state.reconnected
+    }
+
+    // Clear the reconnected flag (called after full state has been processed)
+    pub fn clear_reconnected_flag(&mut self) {
+        self.state.reconnected = false;
+    }
+
+    // Force a full state refresh (called when rship SDK reconnects)
+    pub fn force_full_state_refresh(&mut self) {
+        self.state.reconnected = true;
+        log::info!("Forced full state refresh - will emit all state on next messages");
     }
 
     // Set an input label
