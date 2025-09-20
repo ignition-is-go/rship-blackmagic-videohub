@@ -738,8 +738,8 @@ impl VideohubService {
 
                                         current_device_info = Some(info.clone());
 
-                                        if should_emit {
-                                            if let Err(e) = event_tx.send(VideohubEvent::DeviceStatus {
+                                        if should_emit
+                                            && let Err(e) = event_tx.send(VideohubEvent::DeviceStatus {
                                                 connected: true,
                                                 model_name: info.model_name.clone(),
                                                 video_inputs: info.video_inputs,
@@ -747,7 +747,6 @@ impl VideohubService {
                                             }).await {
                                                 log::error!("Failed to send device status event: {e}");
                                             }
-                                        }
                                     }
                                     VideohubMessage::VideoOutputRouting(routes) => {
                                         for route in routes {
@@ -775,15 +774,14 @@ impl VideohubService {
 
                                             current_input_labels.insert(label.id, label.name.clone());
 
-                                            if should_emit {
-                                                if let Err(e) = event_tx.send(VideohubEvent::Label {
+                                            if should_emit
+                                                && let Err(e) = event_tx.send(VideohubEvent::Label {
                                                     port_type: "input".to_string(),
                                                     port: label.id,
                                                     label: label.name.clone(),
                                                 }).await {
                                                     log::error!("Failed to send input label event for input {}: {e}", label.id);
                                                 }
-                                            }
                                         }
                                     }
                                     VideohubMessage::OutputLabels(labels) => {
@@ -793,15 +791,14 @@ impl VideohubService {
 
                                             current_output_labels.insert(label.id, label.name.clone());
 
-                                            if should_emit {
-                                                if let Err(e) = event_tx.send(VideohubEvent::Label {
+                                            if should_emit
+                                                && let Err(e) = event_tx.send(VideohubEvent::Label {
                                                     port_type: "output".to_string(),
                                                     port: label.id,
                                                     label: label.name.clone(),
                                                 }).await {
                                                     log::error!("Failed to send output label event for output {}: {e}", label.id);
                                                 }
-                                            }
                                         }
                                     }
                                     VideohubMessage::VideoOutputLocks(locks) => {
@@ -812,14 +809,13 @@ impl VideohubService {
 
                                             current_output_locks.insert(lock.id, is_locked);
 
-                                            if should_emit {
-                                                if let Err(e) = event_tx.send(VideohubEvent::OutputLock {
+                                            if should_emit
+                                                && let Err(e) = event_tx.send(VideohubEvent::OutputLock {
                                                     output: lock.id,
                                                     locked: is_locked,
                                                 }).await {
                                                     log::error!("Failed to send output lock event for output {}: {e}", lock.id);
                                                 }
-                                            }
                                         }
                                     }
                                     VideohubMessage::EndPrelude => {
@@ -838,14 +834,13 @@ impl VideohubService {
 
                                             current_take_mode.insert(output, enabled);
 
-                                            if should_emit {
-                                                if let Err(e) = event_tx.send(VideohubEvent::TakeMode {
+                                            if should_emit
+                                                && let Err(e) = event_tx.send(VideohubEvent::TakeMode {
                                                     output,
                                                     enabled,
                                                 }).await {
                                                     log::error!("Failed to send take mode event for output {output}: {e}");
                                                 }
-                                            }
                                         }
 
                                         // Check network interface changes
@@ -855,13 +850,12 @@ impl VideohubService {
 
                                             current_network_interfaces.insert(interface.id, interface.clone());
 
-                                            if should_emit {
-                                                if let Err(e) = event_tx.send(VideohubEvent::NetworkInterface {
+                                            if should_emit
+                                                && let Err(e) = event_tx.send(VideohubEvent::NetworkInterface {
                                                     interface: interface.clone(),
                                                 }).await {
                                                     log::error!("Failed to send network interface event for interface {}: {e}", interface.id);
                                                 }
-                                            }
                                         }
                                     }
                                 }
