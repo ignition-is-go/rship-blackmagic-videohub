@@ -20,7 +20,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: ignition-is-go/pulse-actions/actions/report-resources@2c94ebf4fedd47f0c36d491e0dee5ad446a071b5 # v1.0.0
-    - uses: ignition-is-go/pulse-actions/actions/setup-rust@v1.1.1
+    - uses: ignition-is-go/pulse-actions/actions/setup-rust@2c94ebf4fedd47f0c36d491e0dee5ad446a071b5 # v1.0.0
       with:
         components: rustfmt, clippy
         compiler-cache-endpoint: ${{ secrets.CI_CACHE_ENDPOINT }}
